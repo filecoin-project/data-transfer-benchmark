@@ -84,8 +84,8 @@ These parameters control what kind of additional diagnostic data the test will g
 These parameters will collect traces to a running Jaeger instance. Note that
 this is easiest to setup with the `local:exec` runner and fairly difficult with `local:docker` or `cluster:k8s`
 
-- `jaeger_collector_endpoint` = { type = "string", desc = "send traces to jaeger endpoint"}
-jaeger_agent_host = { type = "string", desc = "send traces to jaeger agent host"}
-jaeger_agent_port = { type = "string", desc = "send traces to jaeger agent port"}
-jaeger_username = { type = "string", desc = "set username when using jaeger endpoint"}
-jaeger_password = { type = "string", desc = "set password when using jaeger endpoint"}
+- `jaeger_collector_endpoint` - jaeger HTTP collector endpoint
+- `jaeger_username` - if using HTTP collector, username to authenticate with
+- `jaeger_password` - if using HTTP collector, password to authenticate with
+- `jaeger_agent_host` - jaeger Thrift UDP agent host
+- `jaeger_agent_port` - jaeger Thrift UDP agent port

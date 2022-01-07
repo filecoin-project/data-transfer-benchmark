@@ -9,7 +9,7 @@ builder = "docker:go"
 runner = "local:docker"
 
 [global.run.test_params]
-size      = "1GB"
+size      = "1GiB"
 latencies = '[]'
 bandwidths = '[]'
 concurrency = "20"
