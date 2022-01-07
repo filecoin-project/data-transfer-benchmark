@@ -2,7 +2,7 @@
 name = "memory-stress"
 
 [global]
-plan = "graphsync"
+plan = "data-transfer-benchmark"
 case = "stress"
 total_instances = 2
 builder = "docker:go"

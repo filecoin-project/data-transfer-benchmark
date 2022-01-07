@@ -1,17 +1,18 @@
-module github.com/ipfs/go-graphsync/testplans/graphsync
+module github.com/filecoin-project/data-transfer-benchmark
 
 go 1.16
 
 require (
 	github.com/dgraph-io/badger/v2 v2.2007.3
 	github.com/dustin/go-humanize v1.0.0
+	github.com/filecoin-project/go-data-transfer v1.12.2-0.20220105234204-c808bc7ea6bf
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-blockservice v0.2.1
 	github.com/ipfs/go-cid v0.1.0
 	github.com/ipfs/go-datastore v0.5.1
 	github.com/ipfs/go-ds-badger2 v0.1.2
 	github.com/ipfs/go-filestore v1.1.0
-	github.com/ipfs/go-graphsync v0.11.5
+	github.com/ipfs/go-graphsync v0.11.6-0.20220105195305-36d430cbf7fc
 	github.com/ipfs/go-ipfs-blockstore v1.1.2
 	github.com/ipfs/go-ipfs-chunker v0.0.5
 	github.com/ipfs/go-ipfs-exchange-offline v0.1.1
@@ -29,6 +30,7 @@ require (
 	github.com/libp2p/go-libp2p-http v0.2.1
 	github.com/libp2p/go-libp2p-noise v0.3.0
 	github.com/libp2p/go-libp2p-tls v0.3.1
+	github.com/libp2p/go-yamux/v2 v2.3.1-0.20220106194814-2352e8cd86a9 // indirect
 	github.com/multiformats/go-multiaddr v0.4.0
 	github.com/multiformats/go-multicodec v0.3.1-0.20210902112759-1539a079fd61
 	github.com/multiformats/go-multihash v0.1.0
@@ -36,6 +38,11 @@ require (
 	github.com/petar/GoLLRB v0.0.0-20210522233825-ae3b015fd3e9
 	github.com/testground/sdk-go v0.3.1-0.20211012114808-49c90fa75405
 	github.com/whyrusleeping/cbor v0.0.0-20171005072247-63513f603b11
+	github.com/whyrusleeping/cbor-gen v0.0.0-20210219115102-f37d292932f2
+	go.opentelemetry.io/otel v1.3.0
+	go.opentelemetry.io/otel/exporters/jaeger v1.3.0
+	go.opentelemetry.io/otel/sdk v1.3.0
 	golang.org/x/exp v0.0.0-20210615023648-acb5c1269671
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 )

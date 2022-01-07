@@ -36,3 +36,8 @@ block_diagnostics = { type = "bool", desc = "output records of block times", def
 use_libp2p_http = { type = "bool", desc = "use libp2p over http for http comparison", default = "false"}
 max_in_progress_requests = { type = "int", desc = "max requests processed by a responder at once", default = "6" }
 use_car_stores = { type = "bool", desc = "use carV2 filestores instead of datastore", default = "true"}
+jaeger_collector_endpoint = { type = "string", desc = "send traces to jaeger endpoint"}
+jaeger_agent_host = { type = "string", desc = "send traces to jaeger agent host"}
+jaeger_agent_port = { type = "string", desc = "send traces to jaeger agent port"}
+jaeger_username = { type = "string", desc = "set username when using jaeger endpoint"}
+jaeger_password = { type = "string", desc = "set password when using jaeger endpoint"}

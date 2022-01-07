@@ -1,8 +1,8 @@
-# go-graphsync test-plan
+# Data Transfer Benchmark
 
 ### What This Does
 
-This test plan measures a series of transfers between two nodes with graphsync, optionally comparing them to HTTP. It offers a wide variety of configurable parameters, which are documented here.
+This test plan measures a series of transfers between two nodes with graphsync and go-data-transfer, optionally comparing them to HTTP. It offers a wide variety of configurable parameters, which are documented here.
 
 ### File Parameters
 
@@ -20,12 +20,14 @@ These parameters configure the nature of the file that is transfered:
    - **Default**: default - false
 - `concurrency` - number of files to construct and attempt to transfer *simultaneously*
    - **Default**: 1
+- `use_car_stores` - on the provider, store each file with a go-filestore backed by a CarV2 for the index and on the other side write the results to a single CarV2 file as the blockstore. This mimics the way Lotus transfers files.
 
 Why you might want to change these:
 - obviously large file sizes more closely mirror use cases in a typical filecoin data transfer work load
 - the links per level, chunk size, and raw leaves allow you to expriment with different dag structures and see how graphsync performs in different conditions
 - the disk store allows you to measure the impact of datastore performance
 - concurrency allows you to test how graphsync performs under heavy loads of attempting transfer many files simultaneously
+- using car stores emulates the Lotus transfer flow, which is MUCH faster than using a single data store
 
 ### Networking Parameters
 
@@ -75,3 +77,15 @@ These parameters control what kind of additional diagnostic data the test will g
    - **Default**: none
 - `block_diagnostics` - should we output detailed timings for block operations - blocks queued on the responder, blocks sent out on the network from the responder, responses received on the requestor, and blocks processed on the requestor
    - **Default**: false
+
+
+### Jaeger Parameters
+
+These parameters will collect traces to a running Jaeger instance. Note that
+this is easiest to setup with the `local:exec` runner and fairly difficult with `local:docker` or `cluster:k8s`
+
+- `jaeger_collector_endpoint` = { type = "string", desc = "send traces to jaeger endpoint"}
+jaeger_agent_host = { type = "string", desc = "send traces to jaeger agent host"}
+jaeger_agent_port = { type = "string", desc = "send traces to jaeger agent port"}
+jaeger_username = { type = "string", desc = "set username when using jaeger endpoint"}
+jaeger_password = { type = "string", desc = "set password when using jaeger endpoint"}

@@ -2,11 +2,11 @@
 name = "memory-stress"
 
 [global]
-plan = "graphsync"
+plan = "data-transfer-benchmark"
 case = "stress"
 total_instances = 2
-builder = "exec:go"
-runner = "local:exec"
+builder = "docker:go"
+runner = "local:docker"
 
 [global.run.test_params]
 size      = "1GB"
@@ -20,9 +20,10 @@ disk_store = "true"
 # memory_snapshots = "detailed"
 compare_http = "false"
 max_in_progress_requests = "20"
-max_memory_per_peer = "256MiB"
-max_memory_total = "1GiB"
+max_memory_per_peer = "16Mib"
+max_memory_total = "4GiB"
 use_car_stores = "true"
+block_diagnostics = "true"
 
 [[groups]]
 id = "providers"
