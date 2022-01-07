@@ -5,14 +5,14 @@ go 1.16
 require (
 	github.com/dgraph-io/badger/v2 v2.2007.3
 	github.com/dustin/go-humanize v1.0.0
-	github.com/filecoin-project/go-data-transfer v1.12.2-0.20220105234204-c808bc7ea6bf
+	github.com/filecoin-project/go-data-transfer v1.12.2-0.20220107014435-94a04be2c399
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-blockservice v0.2.1
 	github.com/ipfs/go-cid v0.1.0
 	github.com/ipfs/go-datastore v0.5.1
 	github.com/ipfs/go-ds-badger2 v0.1.2
 	github.com/ipfs/go-filestore v1.1.0
-	github.com/ipfs/go-graphsync v0.11.6-0.20220105195305-36d430cbf7fc
+	github.com/ipfs/go-graphsync v0.11.6-0.20220107014108-963feeaf46e8
 	github.com/ipfs/go-ipfs-blockstore v1.1.2
 	github.com/ipfs/go-ipfs-chunker v0.0.5
 	github.com/ipfs/go-ipfs-exchange-offline v0.1.1

@@ -23,6 +23,7 @@ max_in_progress_requests = "20"
 max_memory_per_peer = "16Mib"
 max_memory_total = "4GiB"
 use_car_stores = "true"
+jaeger_collector_endpoint = "http://jaeger:14268/api/traces"
 block_diagnostics = "true"
 
 [[groups]]

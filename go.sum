@@ -221,8 +221,8 @@ github.com/evanphx/json-patch v4.2.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLi
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/filecoin-project/go-cbor-util v0.0.0-20191219014500-08c40a1e63a2 h1:av5fw6wmm58FYMgJeoB/lK9XXrgdugYiTqkdxjTy9k8=
 github.com/filecoin-project/go-cbor-util v0.0.0-20191219014500-08c40a1e63a2/go.mod h1:pqTiPHobNkOVM5thSRsHYjyQfq7O5QSCMhvuu9JoDlg=
-github.com/filecoin-project/go-data-transfer v1.12.2-0.20220105234204-c808bc7ea6bf h1:veNNVsvnVyboDHDjFR3gemAHC7LRRkhnimIhxmzWdGU=
-github.com/filecoin-project/go-data-transfer v1.12.2-0.20220105234204-c808bc7ea6bf/go.mod h1:Gq95oXBk+RuM3NQZT4dnuYN1MFmRjJk7ovJrDfaQ6gY=
+github.com/filecoin-project/go-data-transfer v1.12.2-0.20220107014435-94a04be2c399 h1:3YDdbFx5O3RuH1oJ4KWgtcuxa6qnwRdBRmMSoVkK5bQ=
+github.com/filecoin-project/go-data-transfer v1.12.2-0.20220107014435-94a04be2c399/go.mod h1:Gq95oXBk+RuM3NQZT4dnuYN1MFmRjJk7ovJrDfaQ6gY=
 github.com/filecoin-project/go-ds-versioning v0.0.0-20211206185234-508abd7c2aff h1:2bG2ggVZ/rInd/YqUfRj4A5siGuYOPxxuD4I8nYLJF0=
 github.com/filecoin-project/go-ds-versioning v0.0.0-20211206185234-508abd7c2aff/go.mod h1:C9/l9PnB1+mwPa26BBVpCjG/XQCB0yj/q5CK2J8X1I4=
 github.com/filecoin-project/go-statemachine v0.0.0-20200925024713-05bd7c71fbfe h1:dF8u+LEWeIcTcfUcCf3WFVlc81Fr2JKg8zPzIbBDKDw=
@@ -510,8 +510,8 @@ github.com/ipfs/go-ds-leveldb v0.5.0/go.mod h1:d3XG9RUDzQ6V4SHi8+Xgj9j1XuEk1z82l
 github.com/ipfs/go-filestore v1.1.0 h1:Pu4tLBi1bucu6/HU9llaOmb9yLFk/sgP+pW764zNDoE=
 github.com/ipfs/go-filestore v1.1.0/go.mod h1:6e1/5Y6NvLuCRdmda/KA4GUhXJQ3Uat6vcWm2DJfxc8=
 github.com/ipfs/go-graphsync v0.11.5/go.mod h1:+/sZqRwRCQRrV7NCzgBtufmr5QGpUE98XSa7NlsztmM=
-github.com/ipfs/go-graphsync v0.11.6-0.20220105195305-36d430cbf7fc h1:peHD9T1USj3tSkLZgqjFUD/fed9EbTVnX5/+8yNmkQk=
-github.com/ipfs/go-graphsync v0.11.6-0.20220105195305-36d430cbf7fc/go.mod h1:+/sZqRwRCQRrV7NCzgBtufmr5QGpUE98XSa7NlsztmM=
+github.com/ipfs/go-graphsync v0.11.6-0.20220107014108-963feeaf46e8 h1:Z1D1vrqBic/Ldycffu//Soohcp3VqWwj5WwG5p1w+d8=
+github.com/ipfs/go-graphsync v0.11.6-0.20220107014108-963feeaf46e8/go.mod h1:+/sZqRwRCQRrV7NCzgBtufmr5QGpUE98XSa7NlsztmM=
 github.com/ipfs/go-ipfs-blockstore v0.0.1/go.mod h1:d3WClOmRQKFnJ0Jz/jj/zmksX0ma1gROTlovZKBmN08=
 github.com/ipfs/go-ipfs-blockstore v0.2.1/go.mod h1:jGesd8EtCM3/zPgx+qr0/feTXGUeRai6adgwC+Q+JvE=
 github.com/ipfs/go-ipfs-blockstore v1.1.1/go.mod h1:w51tNR9y5+QXB0wkNcHt4O2aSZjTdqaEWaQdSxEyUOY=
