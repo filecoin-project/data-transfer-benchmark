@@ -21,9 +21,9 @@ require (
 	github.com/ipfs/go-ipld-format v0.2.0
 	github.com/ipfs/go-merkledag v0.5.1
 	github.com/ipfs/go-unixfs v0.2.6
-	github.com/ipld/go-car v0.3.3
+	github.com/ipld/go-car v0.4.0
 	github.com/ipld/go-car/v2 v2.1.1
-	github.com/ipld/go-ipld-prime v0.14.3
+	github.com/ipld/go-ipld-prime v0.16.0
 	github.com/libp2p/go-libp2p v0.16.0
 	github.com/libp2p/go-libp2p-core v0.11.0
 	github.com/libp2p/go-libp2p-gostream v0.3.1
