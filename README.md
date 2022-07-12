@@ -4,6 +4,19 @@
 
 This test plan measures a series of transfers between two nodes with graphsync and go-data-transfer, optionally comparing them to HTTP and HTTP over libp2p. It offers a wide variety of configurable parameters, which are documented here.
 
+### Comparing performance
+
+The included Testground composition demonstrates a comparison of GraphSync, HTTP, and libp2p over HTTP in transferring a 500MB CAR file under various network conditions. It uses unlimited bandwidth and three latencies, with interesting results. The big takeaway is we see the biggest performance drop comes from the switch traditional network to libp2p, at least with our go libraries. Here is a summary of the results:
+
+- **No Latency**: GraphSync is slowest, cause under unlimited bandwidth and no latency, the performance penalty of writing a CAR file block by block comes into play. HTTP is best and HTTP over Libp2p is slightly behind. Everything overall is fast.
+- **40ms roundtrip latency** (it says 20ms in pics but it’s on both sides -- half of real world cross country US): we see Graphsync do extremely well — basically on par with HTTP. Both drop significantly from zero latency. HTTP over libp2p takes a big drop and runs the slowest by 3x
+- **80ms roundtrip latency** (close to real world latency conditions): this is where we see a 5x difference emerge with pure HTTP. Graphsync takes 44 seconds to transfer the file, HTTP takes 7. HTTP over libp2p tanks further, taking 2 minutes 38 seconds.
+
+Conclusions:
+HTTP seems to excel under real world conditions. What’s happening? I don’t know. But it actually drops from around 20s to 7s between 40ms & 80ms! Perhaps go’s http library (written by Google and used for downloads.google.com, so presumably written with an eye to performance) opens several connections at high latency? (essentially reverse multi-plexing).
+
+![run 1](./run1.png) ![run 2](./run2.png)
+
 ### File Parameters
 
 These parameters configure the nature of the file that is transfered:
