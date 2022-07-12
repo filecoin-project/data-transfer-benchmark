@@ -68,6 +68,12 @@ func (rr *runRecorder) recordRun(duration time.Duration) {
 	rr.runenv.R().RecordPoint(rr.measurement+",transport=graphsync", float64(duration)/float64(time.Second))
 }
 
+func (rr *runRecorder) recordLibp2pHTTPRun(duration time.Duration, bytesRead int64) {
+	rr.runenv.RecordMessage(fmt.Sprintf("\t<<< http over libp2p request complete with no errors, read %d bytes", bytesRead))
+	rr.runenv.RecordMessage("***** ROUND %d observed http over libp2p duration (lat=%s,bw=%d): %s", rr.round, rr.np.latency, rr.np.bandwidth, duration)
+	rr.runenv.R().RecordPoint(rr.measurement+",transport=http", float64(duration)/float64(time.Second))
+}
+
 func (rr *runRecorder) recordHTTPRun(duration time.Duration, bytesRead int64) {
 	rr.runenv.RecordMessage(fmt.Sprintf("\t<<< http request complete with no errors, read %d bytes", bytesRead))
 	rr.runenv.RecordMessage("***** ROUND %d observed http duration (lat=%s,bw=%d): %s", rr.round, rr.np.latency, rr.np.bandwidth, duration)

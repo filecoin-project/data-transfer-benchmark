@@ -3,18 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	gosync "sync"
 	"time"
 
-	"github.com/ipfs/go-blockservice"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	dss "github.com/ipfs/go-datastore/sync"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
-	offline "github.com/ipfs/go-ipfs-exchange-offline"
-	"github.com/ipfs/go-merkledag"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/testground/sdk-go/run"
 	"github.com/testground/sdk-go/runtime"
@@ -44,7 +40,6 @@ func runStress(runenv *runtime.RunEnv, initCtx *run.InitContext) error {
 		blockDiagnostics = runenv.BooleanParam("block_diagnostics")
 		networkParams    = parseNetworkConfig(runenv)
 		memorySnapshots  = parseMemorySnapshotsParam(runenv)
-		useCarStores     = runenv.BooleanParam("use_car_stores")
 	)
 	runenv.RecordMessage("started test instance")
 	runenv.RecordMessage("network params: %v", networkParams)
@@ -78,21 +73,13 @@ func runStress(runenv *runtime.RunEnv, initCtx *run.InitContext) error {
 			os.RemoveAll(dsPath)
 		}
 	}()
-	dtCidListPath, err := ioutil.TempDir("", "cidLists")
-	if err != nil {
-		return err
-	}
-	defer func() {
-		os.RemoveAll(dtCidListPath)
-	}()
 	maxMemoryPerPeer := runenv.SizeParam("max_memory_per_peer")
 	maxMemoryTotal := runenv.SizeParam("max_memory_total")
 	maxInProgressRequests := runenv.IntParam("max_in_progress_requests")
 	var (
 		// make datastore, blockstore, dag service, graphsync
-		bs     = blockstore.NewBlockstore(dss.MutexWrap(datastore))
-		dagsrv = merkledag.NewDAGService(blockservice.New(bs, offline.Exchange(bs)))
-		gsync  = gsi.New(ctx,
+		bs    = blockstore.NewBlockstore(dss.MutexWrap(datastore))
+		gsync = gsi.New(ctx,
 			gsnet.NewFromLibp2pHost(host),
 			storeutil.LinkSystemForBlockstore(bs),
 			gsi.MaxMemoryPerPeerResponder(maxMemoryPerPeer),
@@ -102,9 +89,9 @@ func runStress(runenv *runtime.RunEnv, initCtx *run.InitContext) error {
 		)
 		recorder  = &runRecorder{memorySnapshots: memorySnapshots, blockDiagnostics: blockDiagnostics, runenv: runenv}
 		dtNet     = dtnetwork.NewFromLibp2pHost(host)
-		transport = gst.NewTransport(host.ID(), gsync, dtNet)
+		transport = gst.NewTransport(host.ID(), gsync)
 	)
-	dt, err := dtimpl.NewDataTransfer(namespace.Wrap(dss.MutexWrap(datastore), ds.NewKey("/datatransfer/client/transfers")), dtCidListPath, dtNet, transport)
+	dt, err := dtimpl.NewDataTransfer(namespace.Wrap(dss.MutexWrap(datastore), ds.NewKey("/datatransfer/client/transfers")), dtNet, transport)
 	if err != nil {
 		return err
 	}
@@ -193,7 +180,7 @@ func runStress(runenv *runtime.RunEnv, initCtx *run.InitContext) error {
 
 		runenv.RecordMessage("we are the provider")
 		defer runenv.RecordMessage("done provider")
-		err := runProvider(ctx, runenv, initCtx, dt, dagsrv, size, host, ip, networkParams, concurrency, memorySnapshots, useCarStores, recorder)
+		err := runProvider(ctx, runenv, initCtx, dt, size, host, ip, networkParams, concurrency, memorySnapshots, recorder)
 		if err != nil {
 			runenv.RecordMessage("Error running provider: %s", err.Error())
 		}
@@ -207,7 +194,7 @@ func runStress(runenv *runtime.RunEnv, initCtx *run.InitContext) error {
 			return err
 		}
 		runenv.RecordMessage("done dialling provider")
-		err := runRequestor(ctx, runenv, initCtx, dt, host, p, dagsrv, networkParams, concurrency, size, memorySnapshots, useCarStores, recorder)
+		err := runRequestor(ctx, runenv, initCtx, dt, host, p, networkParams, concurrency, size, memorySnapshots, recorder)
 		if err != nil {
 			runenv.RecordMessage("requestor error: %s", err.Error())
 		}

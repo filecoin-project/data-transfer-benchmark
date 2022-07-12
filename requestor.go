@@ -32,29 +32,33 @@ import (
 )
 
 // runProvider is the test case for the requestor
-func runRequestor(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.InitContext, dt datatransfer.Manager, h host.Host, p *AddrInfo, dagsrv format.DAGService, networkParams []networkParams, concurrency int, size uint64, memorySnapshots snapshotMode, useCarStores bool, recorder *runRecorder) error {
+func runRequestor(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.InitContext, dt datatransfer.Manager, h host.Host, p *AddrInfo, networkParams []networkParams, concurrency int, size uint64, memorySnapshots snapshotMode, recorder *runRecorder) error {
 	var (
-		cids []cid.Cid
 		// create a selector for the whole UnixFS dag
 		sel = selectorparse.CommonSelector_ExploreAllRecursively
 	)
 
 	runHTTPTest := runenv.BooleanParam("compare_http")
-	useLibP2p := runenv.BooleanParam("use_libp2p_http")
-	var client *http.Client
-	if runHTTPTest {
-		if useLibP2p {
-			tr := &http.Transport{}
-			tr.RegisterProtocol("libp2p", p2phttp.NewTransport(h))
-			client = &http.Client{Transport: tr}
-		} else {
-			client = http.DefaultClient
+	runLibp2pHTTPTest := runenv.BooleanParam("compare_libp2p_http")
+
+	var libp2pHTTPClient *http.Client
+	if runLibp2pHTTPTest {
+		tr := &http.Transport{}
+		tr.RegisterProtocol("libp2p", p2phttp.NewTransport(h))
+		libp2pHTTPClient = &http.Client{Transport: tr}
+	}
+
+	rwBlockstores := NewReadWriteBlockstores()
+	stores := make(map[cid.Cid]ipld.LinkSystem)
+	dagSrvs := make(map[cid.Cid]format.DAGService)
+
+	dt.RegisterTransportConfigurer(&voucher.Voucher{}, TransportConfigurer(runenv, func(c cid.Cid) (ipld.LinkSystem, error) {
+		lsys, ok := stores[c]
+		if !ok {
+			return ipld.LinkSystem{}, fmt.Errorf("no blockstore for cid: %s", c.String())
 		}
-	}
-	var rwBlockstores *ReadWriteBlockstores
-	if useCarStores {
-		rwBlockstores = NewReadWriteBlockstores()
-	}
+		return lsys, nil
+	}))
 
 	for round, np := range networkParams {
 		var (
@@ -70,38 +74,26 @@ func runRequestor(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.Init
 
 		// clean up previous CIDs to attempt to free memory
 		// TODO does this work?
-		_ = dagsrv.RemoveMany(ctx, cids)
 
 		sctx, scancel := context.WithCancel(ctx)
 		cidCh := make(chan []cid.Cid, 1)
 		initCtx.SyncClient.MustSubscribe(sctx, topicCid, cidCh)
-		cids = <-cidCh
+		cids := <-cidCh
 		scancel()
 
-		dagSrvs := make(map[cid.Cid]format.DAGService, len(cids))
-		stores := make(map[cid.Cid]ipld.LinkSystem, len(cids))
-
 		for _, c := range cids {
-			if useCarStores {
-				bs, err := rwBlockstores.GetOrOpen(c.String(), filepath.Join(os.TempDir(), c.String()), c)
-				if err != nil {
-					return err
-				}
-				lsys := storeutil.LinkSystemForBlockstore(bs)
-				stores[c] = lsys
-				bsvc := blockservice.New(bs, offline.Exchange(bs))
-				dagSrvs[c] = merkledag.NewDAGService(bsvc)
-				defer func(c cid.Cid) {
-					bs.Finalize()
-					os.Remove(filepath.Join(os.TempDir(), c.String()))
-				}(c)
-			} else {
-				dagSrvs[c] = dagsrv
+			bs, err := rwBlockstores.GetOrOpen(c.String(), filepath.Join(os.TempDir(), c.String()), c)
+			if err != nil {
+				panic(err)
 			}
-		}
-
-		if useCarStores {
-			dt.RegisterTransportConfigurer(&voucher.Voucher{}, TransportConfigurer(runenv, stores))
+			lsys := storeutil.LinkSystemForBlockstore(bs)
+			stores[c] = lsys
+			bsvc := blockservice.New(bs, offline.Exchange(bs))
+			dagSrvs[c] = merkledag.NewDAGService(bsvc)
+			defer func(c cid.Cid) {
+				bs.Finalize()
+				os.Remove(filepath.Join(os.TempDir(), c.String()))
+			}(c)
 		}
 
 		// run GC to get accurate-ish stats.
@@ -113,6 +105,7 @@ func runRequestor(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.Init
 		}
 
 		errgrp, grpctx := errgroup.WithContext(ctx)
+
 		for _, c := range cids {
 			c := c // capture
 
@@ -183,26 +176,6 @@ func runRequestor(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.Init
 				} else if node == nil {
 					return fmt.Errorf("finished graphsync request, but CID not in store")
 				}
-				if runHTTPTest {
-					// request file directly over http
-					start = time.Now()
-					var resp *http.Response
-					var err error
-					if useLibP2p {
-						resp, err = client.Get(fmt.Sprintf("libp2p://%s/%s", p.peerAddr.ID.String(), c.String()))
-					} else {
-						resp, err = client.Get(fmt.Sprintf("http://%s:8080/%s", p.ip.String(), c.String()))
-					}
-					if err != nil {
-						panic(err)
-					}
-					bytesRead, err := io.Copy(ioutil.Discard, resp.Body)
-					if err != nil {
-						panic(err)
-					}
-					dur = time.Since(start)
-					recorder.recordHTTPRun(dur, bytesRead)
-				}
 				return nil
 			})
 		}
@@ -211,6 +184,57 @@ func runRequestor(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.Init
 			return err
 		}
 
+		if runHTTPTest {
+
+			for _, c := range cids {
+				c := c // capture
+				errgrp.Go(func() error {
+					// request file directly over http
+					start := time.Now()
+					resp, err := http.DefaultClient.Get(fmt.Sprintf("http://%s:8080/%s", p.ip.String(), c.String()))
+					if err != nil {
+						panic(err)
+					}
+					bytesRead, err := io.Copy(ioutil.Discard, resp.Body)
+					if err != nil {
+						panic(err)
+					}
+					dur := time.Since(start)
+					recorder.recordHTTPRun(dur, bytesRead)
+					return nil
+				})
+			}
+
+			if err := errgrp.Wait(); err != nil {
+				return err
+			}
+		}
+		if runLibp2pHTTPTest {
+
+			for _, c := range cids {
+				c := c // capture
+				errgrp.Go(func() error {
+					// request file directly over http over libp2p
+					start := time.Now()
+					resp, err := libp2pHTTPClient.Get(fmt.Sprintf("libp2p://%s/%s", p.peerAddr.ID.String(), c.String()))
+					if err != nil {
+						panic(err)
+					}
+					bytesRead, err := io.Copy(ioutil.Discard, resp.Body)
+					if err != nil {
+						panic(err)
+					}
+					dur := time.Since(start)
+					recorder.recordLibp2pHTTPRun(dur, bytesRead)
+
+					return nil
+				})
+			}
+
+			if err := errgrp.Wait(); err != nil {
+				return err
+			}
+		}
 		// wait for all instances to finish running
 		initCtx.SyncClient.MustSignalAndWait(ctx, stateFinish, runenv.TestInstanceCount)
 

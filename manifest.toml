@@ -1,7 +1,7 @@
 name = "graphsync"
 
 [builders]
-"docker:go" = { enabled = true, enable_go_build_cache = true }
+"docker:go" = { enabled = true,  build_base_image = "golang:1.18-buster" }
 "exec:go"   = { enabled = true }
 
 [runners]
@@ -28,14 +28,13 @@ raw_leaves = { type = "bool", desc = "should unixfs leaves be left unwrapped", d
 disk_store = { type = "bool", desc = "should data be stored on disk (true) or memory (false)", default = "false"}
 memory_snapshots = { type = "string", desc = "what kind of memory snapshots to take (none, simple, detailed)", default = "none" }
 compare_http = { type = "bool", desc = "run a comparison against http", default = "true"}
+compare_libp2p_http = { type = "bool", desc = "run a comparison against http", default = "true"}
 max_memory_per_peer = { type = "int", desc = "max memory a responder can queue up per peer", default = "16MiB"}
 max_memory_total = { type = "int", desc = "max memory a responder can queue up total", default = "256MiB"}
 unlimited_bandwidth_case = { type = "bool", desc = "disable unlimited bandwidth test case", default = "true"}
 no_latency_case = { type = "bool", desc = "disable no latency test case", default = "true"}
 block_diagnostics = { type = "bool", desc = "output records of block times", default = "false" }
-use_libp2p_http = { type = "bool", desc = "use libp2p over http for http comparison", default = "false"}
 max_in_progress_requests = { type = "int", desc = "max requests processed by a responder at once", default = "6" }
-use_car_stores = { type = "bool", desc = "use carV2 filestores instead of datastore", default = "true"}
 jaeger_collector_endpoint = { type = "string", desc = "send traces to jaeger endpoint"}
 jaeger_agent_host = { type = "string", desc = "send traces to jaeger agent host"}
 jaeger_agent_port = { type = "string", desc = "send traces to jaeger agent port"}

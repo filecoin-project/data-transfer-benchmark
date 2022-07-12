@@ -2,7 +2,7 @@
 
 ### What This Does
 
-This test plan measures a series of transfers between two nodes with graphsync and go-data-transfer, optionally comparing them to HTTP. It offers a wide variety of configurable parameters, which are documented here.
+This test plan measures a series of transfers between two nodes with graphsync and go-data-transfer, optionally comparing them to HTTP and HTTP over libp2p. It offers a wide variety of configurable parameters, which are documented here.
 
 ### File Parameters
 
@@ -16,16 +16,12 @@ These parameters configure the nature of the file that is transfered:
    - **Default**: 1024
 - `raw_leaves` - should unixfs leaves be raw bytes (true), or wrapped as protonodes (false)
    - **Default**: true
-- `disk_store` - when we ingest the file to unix fs, should the blockstore where it lives be stored on disk (true) or memory (false)
-   - **Default**: default - false
 - `concurrency` - number of files to construct and attempt to transfer *simultaneously*
    - **Default**: 1
-- `use_car_stores` - on the provider, store each file with a go-filestore backed by a CarV2 for the index and on the other side write the results to a single CarV2 file as the blockstore. This mimics the way Lotus transfers files.
 
 Why you might want to change these:
 - obviously large file sizes more closely mirror use cases in a typical filecoin data transfer work load
 - the links per level, chunk size, and raw leaves allow you to expriment with different dag structures and see how graphsync performs in different conditions
-- the disk store allows you to measure the impact of datastore performance
 - concurrency allows you to test how graphsync performs under heavy loads of attempting transfer many files simultaneously
 - using car stores emulates the Lotus transfer flow, which is MUCH faster than using a single data store
 
@@ -64,10 +60,10 @@ These performance configuration parameters in GraphSync may cause bottlenecks wi
 
 The parameters allow you to compare graphsync performance against transfer of the same data under similar conditions over HTTP
 
-- `compare_http` - run the HTTP comparison test
+- `compare_http` - run an HTTP comparison test
    - **Default**: true
-- `use_libp2p_http` - if we run the HTTP comparison test, should we use HTTP over libp2p (true) or just use standard HTTP on top of normal TCP/IP (false)
-   - **Default**: false
+- `compare_libp2p_http` - run an HTTP comparison test, but use HTTP running on top of a libp2p connection
+   - **Default**: true
 
 ### Diagnostic Parameters
 

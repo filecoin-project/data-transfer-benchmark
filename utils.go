@@ -245,7 +245,7 @@ type StoreConfigurableTransport interface {
 }
 
 // TransportConfigurer configurers the graphsync transport to use a custom blockstore per deal
-func TransportConfigurer(runenv *runtime.RunEnv, stores map[cid.Cid]ipld.LinkSystem) datatransfer.TransportConfigurer {
+func TransportConfigurer(runenv *runtime.RunEnv, getStore func(cid.Cid) (ipld.LinkSystem, error)) datatransfer.TransportConfigurer {
 
 	return func(channelID datatransfer.ChannelID, v datatransfer.Voucher, transport datatransfer.Transport) {
 		myVouch, ok := v.(*voucher.Voucher)
@@ -256,12 +256,12 @@ func TransportConfigurer(runenv *runtime.RunEnv, stores map[cid.Cid]ipld.LinkSys
 		if !ok {
 			return
 		}
-		store, ok := stores[*myVouch.C]
-		if !ok {
-			runenv.RecordMessage("no store for cid: %s", *myVouch.C)
+		lsys, err := getStore(*myVouch.C)
+		if err != nil {
+			runenv.RecordMessage("attempt to get link system: %s", err)
 			return
 		}
-		err := gsTransport.UseStore(channelID, store)
+		err = gsTransport.UseStore(channelID, lsys)
 		if err != nil {
 			runenv.RecordMessage("attempting to configure data store: %s", err)
 		}

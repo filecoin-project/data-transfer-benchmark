@@ -23,6 +23,8 @@ import (
 	"github.com/ipfs/go-merkledag"
 	"github.com/ipfs/go-unixfs/importer/balanced"
 	ihelper "github.com/ipfs/go-unixfs/importer/helpers"
+	carv2 "github.com/ipld/go-car/v2"
+	"github.com/ipld/go-car/v2/blockstore"
 	"github.com/ipld/go-ipld-prime"
 	"github.com/libp2p/go-libp2p-core/host"
 	gostream "github.com/libp2p/go-libp2p-gostream"
@@ -34,39 +36,35 @@ import (
 )
 
 // runProvider is the test case for the provider
-func runProvider(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.InitContext, dt datatransfer.Manager, dagsrv format.DAGService, size uint64, h host.Host, ip net.IP, networkParams []networkParams, concurrency int, memorySnapshots snapshotMode, useCarStores bool, recorder *runRecorder) error {
-	var (
-		cids       []cid.Cid
-		bufferedDS = format.NewBufferedDAG(ctx, dagsrv)
-	)
+func runProvider(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.InitContext, dt datatransfer.Manager, size uint64, h host.Host, ip net.IP, networkParams []networkParams, concurrency int, memorySnapshots snapshotMode, recorder *runRecorder) error {
 
 	runHTTPTest := runenv.BooleanParam("compare_http")
-	useLibP2p := runenv.BooleanParam("use_libp2p_http")
-	var svr *http.Server
+	runLibp2pHTTPTest := runenv.BooleanParam("compare_libp2p_http")
+	var httpSvr *http.Server
+	var libp2pHTTPSvr *http.Server
 	if runHTTPTest {
-		if useLibP2p {
-			listener, _ := gostream.Listen(h, p2phttp.DefaultP2PProtocol)
-			defer listener.Close()
-			// start an http server on port 8080
-			runenv.RecordMessage("creating http server at libp2p://%s", h.ID().String())
-			svr = &http.Server{}
-			go func() {
-				if err := svr.Serve(listener); err != nil {
-					runenv.RecordMessage("shutdown http server at libp2p://%s", h.ID().String())
-				}
-			}()
-		} else {
-			runenv.RecordMessage("creating http server at http://%s:8080", ip.String())
-			svr = &http.Server{Addr: ":8080"}
+		runenv.RecordMessage("creating http server at http://%s:8080", ip.String())
+		httpSvr = &http.Server{Addr: ":8080"}
 
-			go func() {
-				if err := svr.ListenAndServe(); err != nil {
-					runenv.RecordMessage("shutdown http server at http://%s:8080", ip.String())
-				}
-			}()
-		}
+		go func() {
+			if err := httpSvr.ListenAndServe(); err != nil {
+				runenv.RecordMessage("shutdown http server at http://%s:8080", ip.String())
+			}
+		}()
 	}
-
+	if runLibp2pHTTPTest {
+		listener, _ := gostream.Listen(h, p2phttp.DefaultP2PProtocol)
+		defer listener.Close()
+		// start an http server on port 8080
+		runenv.RecordMessage("creating libp2p http server at libp2p://%s", h.ID().String())
+		libp2pHTTPSvr = &http.Server{}
+		go func() {
+			if err := libp2pHTTPSvr.Serve(listener); err != nil {
+				runenv.RecordMessage("shutdown libp2p http server at libp2p://%s", h.ID().String())
+			}
+		}()
+	}
+	stores := make(map[cid.Cid]string)
 	for round, np := range networkParams {
 		var (
 			topicCid    = sync.NewTopic(fmt.Sprintf("cid-%d", round), []cid.Cid{})
@@ -78,67 +76,49 @@ func runProvider(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.InitC
 		// wait for all instances to be ready for the next state.
 		initCtx.SyncClient.MustSignalAndWait(ctx, stateNext, runenv.TestInstanceCount)
 		recorder.beginRun(np, size, concurrency, round)
-
-		// remove the previous CIDs from the dag service; hopefully this
-		// will delete them from the store and free up memory.
-		for _, c := range cids {
-			_ = dagsrv.Remove(ctx, c)
+		cids := make([]cid.Cid, 0, concurrency)
+		var bstores []ClosableBlockstore
+		getStore := func(c cid.Cid) (ipld.LinkSystem, error) {
+			store, ok := stores[c]
+			if !ok {
+				return ipld.LinkSystem{}, fmt.Errorf("no store for cid: %w", c)
+			}
+			bs, err := blockstore.OpenReadOnly(store, carv2.ZeroLengthSectionAsEOF(true),
+				blockstore.UseWholeCIDs(true))
+			if err != nil {
+				return ipld.LinkSystem{}, fmt.Errorf("attempting to setup blockstore: %w", err)
+			}
+			bstores = append(bstores, bs)
+			return storeutil.LinkSystemForBlockstore(bs), nil
 		}
-		cids = cids[:0]
-		stores := make(map[cid.Cid]ipld.LinkSystem)
+		dt.RegisterTransportConfigurer(&voucher.Voucher{}, TransportConfigurer(runenv, getStore))
 
 		// generate as many random files as the concurrency level.
 		for i := 0; i < concurrency; i++ {
 			// file with random data
 			data := io.LimitReader(rand.Reader, int64(size))
-			f, err := ioutil.TempFile(os.TempDir(), "unixfs-")
+			file := files.NewReaderFile(data)
+			carFile, err := ioutil.TempFile(os.TempDir(), "fsindex-")
+			if err != nil {
+				panic(err)
+			}
+			n := carFile.Name()
+			err = carFile.Close()
+			if err != nil {
+				panic(err)
+			}
+			bs, err := blockstore.OpenReadWrite(n, nil,
+				carv2.ZeroLengthSectionAsEOF(true),
+				blockstore.UseWholeCIDs(true))
 			defer func() {
-				name := f.Name()
-				f.Close()
-				os.Remove(name)
+				os.Remove(n)
 			}()
 			if err != nil {
 				panic(err)
 			}
-			if _, err := io.Copy(f, data); err != nil {
-				panic(err)
-			}
-			_, err = f.Seek(0, 0)
-			if err != nil {
-				panic(err)
-			}
-			stat, err := f.Stat()
-			if err != nil {
-				panic(err)
-			}
-			file, err := files.NewReaderPathFile(f.Name(), f, stat)
-			if err != nil {
-				panic(err)
-			}
-			var bs ClosableBlockstore
-			var fileDS = bufferedDS
-			if useCarStores {
-				filestore, err := ioutil.TempFile(os.TempDir(), "fsindex-")
-				if err != nil {
-					panic(err)
-				}
-				n := filestore.Name()
-				err = filestore.Close()
-				if err != nil {
-					panic(err)
-				}
-				bs, err = ReadWriteFilestore(n)
-				defer func() {
-					bs.Close()
-					os.Remove(n)
-				}()
-				if err != nil {
-					panic(err)
-				}
-				bsvc := blockservice.New(bs, offline.Exchange(bs))
-				dags := merkledag.NewDAGService(bsvc)
-				fileDS = format.NewBufferedDAG(ctx, dags)
-			}
+			bsvc := blockservice.New(bs, offline.Exchange(bs))
+			dags := merkledag.NewDAGService(bsvc)
+			fileDS := format.NewBufferedDAG(ctx, dags)
 			unixfsChunkSize := uint64(1) << runenv.IntParam("chunk_size")
 			unixfsLinksPerLevel := runenv.IntParam("links_per_level")
 
@@ -149,9 +129,6 @@ func runProvider(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.InitC
 				Dagserv:    fileDS,
 			}
 
-			if _, err := file.Seek(0, 0); err != nil {
-				panic(err)
-			}
 			db, err := params.New(chunk.NewSizeSplitter(file, int64(unixfsChunkSize)))
 			if err != nil {
 				return fmt.Errorf("unable to setup dag builder: %w", err)
@@ -162,10 +139,31 @@ func runProvider(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.InitC
 				return fmt.Errorf("unable to create unix fs node: %w", err)
 			}
 
-			if runHTTPTest {
+			if err := fileDS.Commit(); err != nil {
+				return fmt.Errorf("unable to commit unix fs node: %w", err)
+			}
+
+			err = bs.Finalize()
+			if err != nil {
+				panic(err)
+			}
+			stores[node.Cid()] = n
+
+			cids = append(cids, node.Cid())
+		}
+
+		// run GC to get accurate-ish stats.
+		if memorySnapshots == snapshotSimple || memorySnapshots == snapshotDetailed {
+			recordSnapshots(runenv, size, np, concurrency, "pre")
+		}
+		goruntime.GC()
+
+		// setup http to serve
+		if runHTTPTest {
+			for c, n := range stores {
 				// set up http server to send file
-				http.HandleFunc(fmt.Sprintf("/%s", node.Cid()), func(w http.ResponseWriter, r *http.Request) {
-					fileReader, err := os.Open(f.Name())
+				http.HandleFunc(fmt.Sprintf("/%s", c), func(w http.ResponseWriter, r *http.Request) {
+					fileReader, err := os.Open(n)
 					if err != nil {
 						panic(err)
 					}
@@ -176,30 +174,7 @@ func runProvider(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.InitC
 					}
 				})
 			}
-			if useCarStores {
-				lsys := storeutil.LinkSystemForBlockstore(bs)
-				stores[node.Cid()] = lsys
-				if err := fileDS.Commit(); err != nil {
-					return fmt.Errorf("unable to commit unix fs node: %w", err)
-				}
-			}
-			cids = append(cids, node.Cid())
 		}
-
-		if err := bufferedDS.Commit(); err != nil {
-			return fmt.Errorf("unable to commit unix fs node: %w", err)
-		}
-
-		// run GC to get accurate-ish stats.
-		if memorySnapshots == snapshotSimple || memorySnapshots == snapshotDetailed {
-			recordSnapshots(runenv, size, np, concurrency, "pre")
-		}
-		goruntime.GC()
-
-		if useCarStores {
-			dt.RegisterTransportConfigurer(&voucher.Voucher{}, TransportConfigurer(runenv, stores))
-		}
-
 		runenv.RecordMessage("\tCIDs are: %v", cids)
 		initCtx.SyncClient.MustPublish(ctx, topicCid, cids)
 
@@ -224,10 +199,22 @@ func runProvider(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.InitC
 			recordSnapshots(runenv, size, np, concurrency, "total")
 		}
 
+		for _, bstore := range bstores {
+			bstore.Close()
+		}
+		bstores = nil
+		for c := range stores {
+			delete(stores, c)
+		}
 	}
 
 	if runHTTPTest {
-		if err := svr.Shutdown(ctx); err != nil {
+		if err := httpSvr.Shutdown(ctx); err != nil {
+			panic(err)
+		}
+	}
+	if runLibp2pHTTPTest {
+		if err := libp2pHTTPSvr.Shutdown(ctx); err != nil {
 			panic(err)
 		}
 	}
