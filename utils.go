@@ -105,7 +105,15 @@ func makeHost(ctx context.Context, runenv *runtime.RunEnv, initCtx *run.InitCont
 
 	// ☎️  Let's construct the libp2p node.
 	ip := initCtx.NetClient.MustGetDataNetworkIP()
-	listenAddr := fmt.Sprintf("/ip4/%s/tcp/0", ip)
+	transport := runenv.StringParam("transport")
+	var listenAddr string
+	switch transport {
+	case "tcp":
+		listenAddr = fmt.Sprintf("/ip4/%s/tcp/0", ip)
+	case "quic":
+		listenAddr = fmt.Sprintf("/ip4/%s/udp/0/quic", ip)
+	}
+
 	bwcounter := metrics.NewBandwidthCounter()
 	host, err := libp2p.New(
 		security,

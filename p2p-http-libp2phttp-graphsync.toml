@@ -22,6 +22,7 @@ compare_http = "true"
 max_in_progress_requests = "20"
 max_memory_per_peer = "16Mib"
 max_memory_total = "4GiB"
+transport = "quic"
 
 [[groups]]
 id = "providers"

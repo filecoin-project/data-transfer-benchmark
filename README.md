@@ -43,6 +43,8 @@ Why you might want to change these:
 These parameters control the parameters for the network layer
 - `secure_channel` - type secure encoding for the libp2p channel
    - **Default**: "noise"
+- `transport` - setup libp2p to listen on either tcp or udp+quic
+   - **Default**: "tcp"
 - `latencies` - list of non-zero latencies to run the test under. 
    - **Default**: 100ms, 200ms, 300ms
 - `no_latency_case` - also run a test case with no latency 
